@@ -133,11 +133,6 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
 
     private float cyPortrait = -1f;
     private float cyLandscape = -1f;
-    private Rect lastNotchLog;
-    /** Last landscape notch that was read, and the rotation it belongs to. */
-    private Rect cachedLandscapeNotch;
-    private int cachedNotchRotation = -1;
-    private int notchRetries;
     private final RectF tmp = new RectF();
     private final int[] loc = new int[2];
     private boolean refreshPosted;
@@ -164,7 +159,7 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
         media = new MediaSource(ctx, main, this::requestRefresh);
         cast = new CastSource(ctx);
         exit = new ExitAnimationBridge(cl);
-        alerts = new AlertSource(ctx, oa, this::requestRefresh);
+        alerts = new AlertSource(ctx, this::requestRefresh);
         torch = new FlashlightSource(ctx, main, this::requestRefresh);
         fader = new StatusBarIconFader(density);
     }
@@ -371,22 +366,12 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
             oa.collect(items, hidden, packages);
             media.collect(items, oa.foregroundPackage(), hidden, packages);
             cast.collect(items);
-            alerts.collectDownloads(items);
             AssistantApp.collectAll(items, ctx);
             if (torch.available()) items.removeIf(FlashlightSource::isSystemTorchItem);
             torch.collect(items, view.isExpanded());
             addSavedRecording(items);
         } catch (Throwable t) {
             XLog.e("collect failed", t);
-        }
-        if (items.isEmpty() && IslandSettings.showFullscreen()) {
-            IslandItem idle = new IslandItem("idle:fullscreen");
-            idle.kind = IslandItem.Kind.LIVE;
-            idle.idle = true;
-            idle.noExpand = true;
-            idle.accent = 0xFF8E8E93;
-            idle.postTime = Long.MAX_VALUE;
-            items.add(idle);
         }
 
         long now = SystemClock.uptimeMillis();
@@ -457,13 +442,7 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
         if (IslandSettings.previewLength()) {
             view.setItems(Collections.singletonList(lengthPreview), IslandView.HINT_NONE, Collections.emptyList());
         } else if (alert != null) {
-            boolean idleOnly = items.size() == 1 && items.get(0).idle;
-            if (items.isEmpty() || idleOnly) {
-                view.setItems(Collections.singletonList(alert), IslandView.HINT_NONE, Collections.emptyList());
-            } else {
-                items.add(1, alert);
-                view.setItems(items, hint, hiddenList);
-            }
+            view.setItems(Collections.singletonList(alert), IslandView.HINT_NONE, Collections.emptyList());
             main.postDelayed(this::requestRefresh, Math.max(16, alerts.until() - now));
         } else {
             view.setItems(items, hint, hiddenList);
@@ -523,11 +502,9 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
         if (w <= 0 || h <= 0) return;
         boolean tablet = Math.min(w, h) / density >= 600f;
         int position = IslandSettings.position(tablet);
-        boolean landscape = w > h;
         float cx = w / 2f;
         float cy = statusBarCenterY();
         float holeD = 0f;
-        Rect landscapeNotchRect = null;
         DisplayCutout c = window.cutout();
         Rect top = c != null ? c.getBoundingRectTop() : null;
         if (top != null && top.isEmpty()) top = null;
@@ -536,28 +513,6 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
             if (top != null) cy = Math.max(cy, top.exactCenterY() - b.top);
         }
         if (position == dev.flexy.dynamicisland.Settings.POS_CAMERA && top != null) cx = top.exactCenterX() - b.left;
-        if (landscape && IslandSettings.landscapeNotch()) {
-            // The window insets are sometimes empty during rotation. Reuse the notch read earlier
-            // for this same rotation instead of dropping the island to the center of the screen.
-            int rot = window.rotation();
-            landscapeNotchRect = landscapeNotch(c, b);
-            if (landscapeNotchRect != null) {
-                cachedLandscapeNotch = new Rect(landscapeNotchRect);
-                cachedNotchRotation = rot;
-                notchRetries = 0;
-            } else if (cachedLandscapeNotch != null && cachedNotchRotation == rot) {
-                landscapeNotchRect = new Rect(cachedLandscapeNotch);
-            } else if (notchRetries < 10) {
-                // Nothing known yet for this rotation: check again shortly.
-                notchRetries++;
-                main.postDelayed(this::updateGeometry, 200);
-            }
-            if (landscapeNotchRect != null) {
-                cx = landscapeNotchRect.exactCenterX() - b.left;
-                cy = landscapeNotchRect.exactCenterY() - b.top;
-                top = landscapeNotchRect;
-            }
-        }
         if (top != null && Math.abs(top.exactCenterX() - b.left - cx) < 10 * density) {
             holeD = Math.min(top.width(), top.height()) * 0.78f;
         }
@@ -569,50 +524,16 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
             limit = w - 12 * density;
             if (top != null && top.left - b.left > anchor) limit = Math.min(limit, top.left - b.left - 7 * density);
         }
-        if (landscapeNotchRect != null) {
-            // Flush against the notch edge and grow toward the screen center, like iPhone in landscape.
-            // The pill may use the whole remaining width, so it never runs off the screen.
-            anchor = Math.max(0f, landscapeNotchRect.left - b.left);
-            limit = w - 12 * density;
-            holeD = 0f;
-        }
         if (fader != null) fader.setKeepDate(tablet && position == dev.flexy.dynamicisland.Settings.POS_LEFT);
         boolean glass = (position == dev.flexy.dynamicisland.Settings.POS_LEFT
                 || (tablet && position == dev.flexy.dynamicisland.Settings.POS_CENTER)) && IslandSettings.glassPill(tablet);
+        boolean landscape = w > h;
         if (landscape) cyLandscape = cy;
         else cyPortrait = cy;
         view.setGeometry(w, cx, cy, holeD, tablet, anchor, glass, limit);
         applyWindowHeight();
         updateSuppression();
         pushExitTargets(false);
-    }
-
-    private Rect landscapeNotch(DisplayCutout cutout, Rect bounds) {
-        if (cutout == null) return null;
-        Rect side = null;
-        Rect fallback = null;
-        int sideArea = -1;
-        int fallbackArea = -1;
-        for (Rect rect : cutout.getBoundingRects()) {
-            if (rect == null || rect.isEmpty()) continue;
-            int area = rect.width() * rect.height();
-            if (area > fallbackArea) {
-                fallback = new Rect(rect);
-                fallbackArea = area;
-            }
-            boolean edge = rect.left <= bounds.left + 2 || rect.right >= bounds.right - 2;
-            if (edge && area > sideArea) {
-                side = new Rect(rect);
-                sideArea = area;
-            }
-        }
-        Rect result = side != null ? side : fallback;
-        if (result != null && !result.equals(lastNotchLog)) {
-            lastNotchLog = new Rect(result);
-            XLog.i("landscape notch " + result.left + "," + result.top + " "
-                    + result.width() + "x" + result.height() + (side == null ? " fallback" : ""));
-        }
-        return result;
     }
 
     private Rect hiddenCameraHole(Rect bounds) {
@@ -703,7 +624,7 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
     private void updateSuppression() {
         if (view == null) return;
         boolean keyguard = barState == 1 || barState == 2;
-        view.setStatusBarHidden(statusBarWindowState != 0 && !IslandSettings.showFullscreen());
+        view.setStatusBarHidden(statusBarWindowState != 0);
         boolean folding = SystemClock.uptimeMillis() - sleepFoldAt < SLEEP_FOLD_MS;
         view.setSuppressed(((keyguard || keyguardStuck || dozing) && !folding) || revealPending);
         onIslandFrame();
