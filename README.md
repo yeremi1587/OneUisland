@@ -31,6 +31,8 @@ Get the ready-made APK from [Releases](../../releases).
 - Messages: a new WhatsApp or Telegram message shows as a card for about 4.5 s (sender, chat name, text, app icon). Tap it to open the chat.
 - Chrome downloads: a progress ring while a file downloads, and a short "download complete" card when it finishes. The text comes from Chrome, so it follows your language. Samsung Internet is included.
 - Message and download alerts stay quiet when the screen is locked, Do Not Disturb is on, a call is running, or the app is already open in front.
+- Game temperature (optional): while a game from the configurable app list is in front, the compact pill shows the battery temperature reading with the chip icon, turning green when the thermal status is normal, amber at moderate, red at severe or worse. It refreshes at most every 5 seconds and never opens a card. Needs "Show in fullscreen" to appear over games.
+- Game session summary (optional): leaving a game shows a short card (about 5 s) with the session duration and the battery percentage it spent. Sessions under one minute are ignored, and a System UI restart discards the running session silently.
 
 ## Settings
 
@@ -45,6 +47,7 @@ Open the module settings from LSPosed:
 - Alert toggles: headphone battery (every unlock or only on connect), Do Not Disturb, sound mode, low battery.
 - Notifications: WhatsApp and Telegram messages, Chrome downloads (each can be turned off). WhatsApp and Telegram island alerts currently work only with Do Not Disturb enabled, due to a duplicate-notification bug under investigation.
 - Island position: center or left after the clock (grows only to the right, stops before the camera). Tablets and the inner screen of foldables also get "around the front camera". Foldables have separate settings for the inner and cover screens. The left island, and the centered island on tablets and the inner screen, can use a blurred background instead of black.
+- Gaming: chip temperature while gaming (off by default), session summary on exit (off by default), and the game app list (Free Fire by default). The temperature pill uses the battery temperature reading and follows the thermal status color.
 
 ## Installation
 
