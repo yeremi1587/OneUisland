@@ -168,7 +168,7 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
         cast = new CastSource(ctx);
         exit = new ExitAnimationBridge(cl);
         alerts = new AlertSource(ctx, oa, this::requestRefresh);
-        game = new GameSource(ctx, oa, main, this::requestRefresh);
+        game = new GameSource(ctx, oa, alerts, main, this::requestRefresh);
         torch = new FlashlightSource(ctx, main, this::requestRefresh);
         fader = new StatusBarIconFader(density);
     }

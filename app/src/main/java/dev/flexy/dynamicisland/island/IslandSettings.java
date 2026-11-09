@@ -53,6 +53,14 @@ final class IslandSettings {
         return values.getBoolean(Settings.GAME_TEMPERATURE, Settings.DEF_GAME_TEMPERATURE);
     }
 
+    static boolean gameSession() {
+        return values.getBoolean(Settings.GAME_SESSION, Settings.DEF_GAME_SESSION);
+    }
+
+    static boolean gamingEnabled() {
+        return gameTemperature() || gameSession();
+    }
+
     static java.util.Set<String> gamePackages() {
         String v = values.getString(Settings.GAME_PACKAGES, Settings.DEF_GAME_PACKAGES);
         java.util.Set<String> out = new java.util.HashSet<>();

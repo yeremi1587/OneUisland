@@ -39,9 +39,11 @@ public final class Settings {
     public static final String EXPAND_LANDSCAPE = "expand_landscape";
     public static final boolean DEF_EXPAND_LANDSCAPE = false;
 
-    /** Gaming island: temperature HUD. Off by default. */
+    /** Gaming island: temperature HUD and session summary, both off by default. */
     public static final String GAME_TEMPERATURE = "game_temperature";
     public static final boolean DEF_GAME_TEMPERATURE = false;
+    public static final String GAME_SESSION = "game_session_summary";
+    public static final boolean DEF_GAME_SESSION = false;
     public static final String GAME_PACKAGES = "game_packages";
     public static final String DEF_GAME_PACKAGES = "com.dts.freefireth,com.dts.freefiremax";
 

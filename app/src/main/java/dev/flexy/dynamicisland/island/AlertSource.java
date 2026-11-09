@@ -114,6 +114,16 @@ final class AlertSource {
         onChanged.run();
     }
 
+    /** Short alert bypassing the DND/keyguard gates, for events like the gaming session summary. */
+    void showShort(IslandItem item, long ms) {
+        show(item, ms);
+    }
+
+    /** Short alert bypassing the DND/keyguard gates, for events like the gaming session summary. */
+    void showShort(IslandItem item, long ms) {
+        show(item, ms);
+    }
+
 
     private boolean dndOn() {
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);

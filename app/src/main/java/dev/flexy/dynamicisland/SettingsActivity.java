@@ -90,10 +90,12 @@ public final class SettingsActivity extends Activity {
         gap(root);
         LinearLayout games = group(root, "Gaming");
         toggle(games, "Chip temperature while gaming", Settings.GAME_TEMPERATURE, Settings.DEF_GAME_TEMPERATURE);
+        toggle(games, "Session summary on exit", Settings.GAME_SESSION, Settings.DEF_GAME_SESSION);
         link(games, "Game apps", this::gamePackagesSummary, () ->
                 startActivity(new Intent(this, SettingsActivity.class).putExtra(EXTRA_SCREEN, SCREEN_GAMES)));
         TextView gameNote = label("Needs \"Show in fullscreen\" for the island to appear over games. "
-                + "Temperature shows the battery reading and follows the thermal status color.", 12, secondary, false);
+                + "Temperature shows the battery reading and follows the thermal status color. "
+                + "The summary needs a session of at least one minute.", 12, secondary, false);
         gameNote.setPadding(0, 0, 0, dp(8));
         games.addView(gameNote);
 

@@ -11,13 +11,16 @@ import android.os.PowerManager;
 import java.util.List;
 import java.util.Set;
 
-/** Gaming island: optional compact temperature pill while a game from the configured
- *  list is in the foreground. Off by default. */
+/** Gaming island. Two optional settings, both off by default:
+ *  - a compact temperature pill while a game from the configured list is in front;
+ *  - a short session summary (duration, battery spent) after the game closes. */
 final class GameSource {
-    /** The temperature pill refreshes on this cadence while a game is in the foreground. */
+    /** Both features refresh on this cadence while a game is in the foreground. */
     private static final long GAME_TICK_MS = 5_000;
     /** Idle foreground probe — checks the game list only, no island refresh. */
     private static final long IDLE_POLL_MS = 5_000;
+    private static final long MIN_SESSION_MS = 60_000;
+    private static final long SUMMARY_SHOW_MS = 5_000;
 
     private static final int GREEN = 0xFF30D158;
     private static final int AMBER = 0xFFFF9F0A;
@@ -25,6 +28,7 @@ final class GameSource {
 
     private final Context ctx;
     private final OaSource oa;
+    private final AlertSource alerts;
     private final Handler main;
     private final Runnable onChanged;
 
@@ -33,12 +37,16 @@ final class GameSource {
     private Set<String> packages = IslandSettings.gamePackages();
     private boolean enabled;
 
+    private String inGame;
+    private long startedAt;
+    private int startBattery = -1;
     private boolean scheduled;
     private Set<String> lastPackagesState;
 
-    GameSource(Context ctx, OaSource oa, Handler main, Runnable onChanged) {
+    GameSource(Context ctx, OaSource oa, AlertSource alerts, Handler main, Runnable onChanged) {
         this.ctx = ctx;
         this.oa = oa;
+        this.alerts = alerts;
         this.main = main;
         this.onChanged = onChanged;
     }
@@ -79,15 +87,21 @@ final class GameSource {
     private void refreshPackages() {
         Set<String> next = IslandSettings.gamePackages();
         if (next.equals(lastPackagesState)) {
-            enabled = IslandSettings.gameTemperature();
-            if (!enabled) unschedule();
+            enabled = IslandSettings.gamingEnabled();
+            if (!enabled && inGame == null) unschedule();
             return;
         }
         lastPackagesState = next;
         packages = next;
-        enabled = IslandSettings.gameTemperature();
-        if (!enabled) unschedule();
-        else schedule();
+        boolean wasEnabled = enabled;
+        enabled = IslandSettings.gamingEnabled();
+        if (!enabled) {
+            if (inGame != null) leaveGame(inGame);
+            inGame = null;
+            unschedule();
+        } else if (!wasEnabled) {
+            schedule();
+        }
     }
 
     /** Called on every controller refresh; appends the temperature pill when a game runs. */
@@ -96,9 +110,72 @@ final class GameSource {
         if (!enabled) return;
         schedule();
         String fg = oa.foregroundPackage();
-        if (fg == null || !packages.contains(fg)) return;
-        IslandItem temp = temperatureItem(fg);
-        if (temp != null) out.add(temp);
+        boolean game = fg != null && packages.contains(fg);
+        if (game) {
+            if (inGame == null) {
+                enterGame(fg);
+            } else if (!inGame.equals(fg)) {
+                leaveGame(inGame);
+                enterGame(fg);
+            }
+        } else if (inGame != null) {
+            leaveGame(inGame);
+        }
+        if (inGame != null && IslandSettings.gameTemperature()) {
+            IslandItem temp = temperatureItem(inGame);
+            if (temp != null) out.add(temp);
+        }
+    }
+
+    private void enterGame(String pkg) {
+        inGame = pkg;
+        startedAt = android.os.SystemClock.elapsedRealtime();
+        startBattery = batteryCapacity();
+    }
+
+    private void leaveGame(String pkg) {
+        inGame = null;
+        long duration = android.os.SystemClock.elapsedRealtime() - startedAt;
+        if (duration < MIN_SESSION_MS || !IslandSettings.gameSession() || startBattery < 0) {
+            return;
+        }
+        int now = batteryCapacity();
+        int spent = Math.max(0, startBattery - now);
+        IslandItem it = new IslandItem("game:session");
+        it.alert = true;
+        it.kind = IslandItem.Kind.LIVE;
+        it.packageName = pkg;
+        it.icon = AppInfo.icon(ctx, pkg);
+        it.iconIsImage = it.icon != null;
+        it.overline = AppInfo.clip(AppInfo.label(ctx, pkg), 40);
+        it.title = durationText(duration) + " · " + spent + "%";
+        it.accent = GREEN;
+        it.noExpand = true;
+        it.postTime = Long.MAX_VALUE;
+        alerts.showShort(it, SUMMARY_SHOW_MS);
+    }
+
+    /** Battery percent via the sticky ACTION_BATTERY_CHANGED broadcast (no receiver leak). */
+    private int batteryCapacity() {
+        try {
+            Intent stick = ctx.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (stick == null) return -1;
+            int level = stick.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scale = stick.getIntExtra(BatteryManager.EXTRA_SCALE, 0);
+            if (level < 0 || scale <= 0) return -1;
+            return level * 100 / scale;
+        } catch (Throwable t) {
+            return -1;
+        }
+    }
+
+    private static String durationText(long ms) {
+        long min = (ms + 30_000) / 60_000;
+        if (min >= 60) {
+            long h = min / 60;
+            return h + " h " + (min % 60) + " min";
+        }
+        return min + " min";
     }
 
     /** Battery temperature read from the sticky battery broadcast; the color follows the
