@@ -42,7 +42,24 @@ final class OaSource {
 
     String foregroundPackage() {
         Object cn = Refl.getStatic(helper, "baseActivityComponentName");
-        return cn instanceof ComponentName ? ((ComponentName) cn).getPackageName() : null;
+        if (cn instanceof ComponentName) {
+            String pkg = ((ComponentName) cn).getPackageName();
+            if (pkg != null && !pkg.isEmpty()) return pkg;
+        }
+        // Fallback: OA chip field is often unset for fullscreen games.
+        try {
+            android.app.ActivityManager am = ctx.getSystemService(android.app.ActivityManager.class);
+            if (am != null) {
+                java.util.List<android.app.ActivityManager.RunningTaskInfo> tasks = am.getRunningTasks(1);
+                if (tasks != null && !tasks.isEmpty()) {
+                    ComponentName top = tasks.get(0).topActivity;
+                    if (top != null) return top.getPackageName();
+                }
+            }
+        } catch (Throwable t) {
+            XLog.e("foreground fallback failed", t);
+        }
+        return null;
     }
 
     void collect(List<IslandItem> out, Set<String> hiddenByForeground, Collection<String> packages) {

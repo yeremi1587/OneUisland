@@ -131,11 +131,13 @@ final class GameSource {
         inGame = pkg;
         startedAt = android.os.SystemClock.elapsedRealtime();
         startBattery = batteryCapacity();
+        XLog.i("game enter: " + pkg);
     }
 
     private void leaveGame(String pkg) {
         inGame = null;
         long duration = android.os.SystemClock.elapsedRealtime() - startedAt;
+        XLog.i("game leave: " + pkg + " " + (duration / 1000) + "s");
         if (duration < MIN_SESSION_MS || !IslandSettings.gameSession() || startBattery < 0) {
             return;
         }
@@ -153,6 +155,7 @@ final class GameSource {
         it.noExpand = true;
         it.postTime = Long.MAX_VALUE;
         alerts.showShort(it, SUMMARY_SHOW_MS);
+        XLog.i("game session summary shown: " + it.title);
     }
 
     /** Battery percent via the sticky ACTION_BATTERY_CHANGED broadcast (no receiver leak). */
