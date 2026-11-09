@@ -7,6 +7,9 @@ import de.robv.android.xposed.XposedBridge;
 public final class XLog {
     private static final String TAG = "DynamicIsland";
 
+    /** Set to true locally to see the chatty logs that are normally dropped. */
+    public static boolean DEBUG = false;
+
     private XLog() {
     }
 
@@ -18,7 +21,14 @@ public final class XLog {
         }
     }
 
+    /** Chatty informational lines that only matter when debugging. */
+    public static void v(String msg) {
+        if (!DEBUG) return;
+        i(msg);
+    }
+
     public static void d(String msg) {
+        if (!DEBUG) return;
         Log.d(TAG, msg);
     }
 

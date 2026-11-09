@@ -86,7 +86,7 @@ final class ShadeMediaPlayer {
                             }));
                         }
                         PLAYERS.put(view, new Binding(view, p.thisObject));
-                        XLog.i("shade media renderer attached: " + view.getClass().getName());
+                        XLog.v("shade media renderer attached: " + view.getClass().getName());
                     }
                     view.invalidate();
                     view.requestLayout();
@@ -106,6 +106,7 @@ final class ShadeMediaPlayer {
         int state = land ? 1 : 0;
         if (treeLoggedState == state) return;
         treeLoggedState = state;
+        if (!XLog.DEBUG) return;
         StringBuilder sb = new StringBuilder("shade tree landscape=" + land);
         View cur = from;
         for (int i = 0; i < 8 && cur != null; i++) {

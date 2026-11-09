@@ -616,18 +616,28 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
         Rect result = side != null ? side : fallback;
         if (result != null && !result.equals(lastNotchLog)) {
             lastNotchLog = new Rect(result);
-            XLog.i("landscape notch " + result.left + "," + result.top + " "
+            XLog.v("landscape notch " + result.left + "," + result.top + " "
                     + result.width() + "x" + result.height() + (side == null ? " fallback" : ""));
         }
         return result;
     }
 
+    private String hiddenCutoutSpec;
+    private int hiddenCutoutWidth = -1;
+    private Rect hiddenCutoutCached = EMPTY_HOLE;
+
+    private static final Rect EMPTY_HOLE = new Rect();
+
+    /** Camera-hole rect is static per rotation/width, so parse the cutout spec only once. */
     private Rect hiddenCameraHole(Rect bounds) {
         try {
             android.content.res.Resources r = android.content.res.Resources.getSystem();
             int id = r.getIdentifier("config_mainBuiltInDisplayCutoutForUDC", "string", "android");
             String spec = id == 0 ? null : r.getString(id);
             if (spec == null || spec.trim().isEmpty()) return null;
+            if (spec.equals(hiddenCutoutSpec) && hiddenCutoutWidth == bounds.width()) {
+                return hiddenCutoutCached.isEmpty() ? null : new Rect(hiddenCutoutCached);
+            }
             float scale = spec.contains("@dp") ? density : 1f;
             float origin = spec.contains("@left") ? 0f : bounds.width() / 2f;
             String data = spec.replaceAll("@[a-z_]+", "").trim();
@@ -639,7 +649,10 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
             int size = Math.round(box.width() * scale);
             int left = Math.round(bounds.left + origin + box.left * scale);
             int bottom = Math.round(box.bottom * scale);
-            return new Rect(left, Math.max(0, bottom - size), left + size, bottom);
+            hiddenCutoutSpec = spec;
+            hiddenCutoutWidth = bounds.width();
+            hiddenCutoutCached.set(left, Math.max(0, bottom - size), left + size, bottom);
+            return new Rect(hiddenCutoutCached);
         } catch (Throwable t) {
             XLog.e("hidden camera cutout", t);
             return null;

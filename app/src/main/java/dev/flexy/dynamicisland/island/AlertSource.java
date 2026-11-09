@@ -728,7 +728,7 @@ final class AlertSource {
             if (p.picture == null && iconKey != META_MAIN_ICON) p.picture = loadUri(metaString(d, META_MAIN_ICON));
             if (p.picture == null) p.picture = galaxyBudsPicture(metaString(d, META_MODEL_NAME), p.name);
             String address = d.getAddress();
-            XLog.i("headset " + p.name + ": L" + p.left + " R" + p.right + " " + p.single + "% picture=" + (p.picture != null));
+            XLog.v("headset " + p.name + ": L" + p.left + " R" + p.right + " " + p.single + "% picture=" + (p.picture != null));
             btMain.post(() -> {
                 Pods before = shownPods();
                 btPods = p;

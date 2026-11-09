@@ -57,7 +57,7 @@ final class ExitAnimationBridge {
                 data.recycle();
             }
             lastSignature = sig;
-            if (changed) XLog.d("exit targets -> " + packages + " " + portrait + " / " + landscape);
+            if (changed) XLog.v("exit targets -> " + packages + " " + portrait + " / " + landscape);
         } catch (Throwable t) {
             XLog.e("exit target push failed", t);
         }

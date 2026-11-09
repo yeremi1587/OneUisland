@@ -11,6 +11,9 @@ final class AudioLevels {
     static final int BANDS = 5;
     private static final float[] EDGES_HZ = {50f, 160f, 450f, 1200f, 3200f, 9000f};
     private static final long RETRY_MS = 30_000;
+    /** Keep the Visualizer alive this long after a "not needed" frame, so visibility
+     * flicker does not create/release the audio capture repeatedly. */
+    private static final long HOLD_MS = 1000;
 
     private final float[] levels = new float[BANDS];
     private static final float PEAK_HALF_LIFE_S = 7f;
@@ -37,12 +40,24 @@ final class AudioLevels {
     }
 
     void setActive(boolean active) {
+        bg.removeCallbacks(pendingStop);
         if (active == wanted) return;
         wanted = active;
-        bg.post(() -> {
-            if (active && viz == null) start();
-            else if (!active && viz != null) stop();
-        });
+        if (active) {
+            bg.post(this::ensure);
+            return;
+        }
+        bg.postDelayed(pendingStop, HOLD_MS);
+    }
+
+    private final Runnable pendingStop = () -> {
+        if (wanted) return;
+        stop();
+    };
+
+    private void ensure() {
+        if (!wanted || viz != null) return;
+        start();
     }
 
     boolean isLive() {
