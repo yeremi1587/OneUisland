@@ -42,6 +42,7 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
     final AlertSource alerts;
     private final FlashlightSource torch;
     private final StatusBarIconFader fader;
+    private final GameSource game;
     private final AudioLevels audio = new AudioLevels();
     private final float density;
 
@@ -167,6 +168,7 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
         cast = new CastSource(ctx);
         exit = new ExitAnimationBridge(cl);
         alerts = new AlertSource(ctx, oa, this::requestRefresh);
+        game = new GameSource(ctx, oa, main, this::requestRefresh);
         torch = new FlashlightSource(ctx, main, this::requestRefresh);
         fader = new StatusBarIconFader(density);
     }
@@ -378,6 +380,7 @@ public final class IslandController implements IslandView.Host, IslandWindow.Lis
             if (torch.available()) items.removeIf(FlashlightSource::isSystemTorchItem);
             torch.collect(items, view.isExpanded());
             addSavedRecording(items);
+            game.feed(items);
         } catch (Throwable t) {
             XLog.e("collect failed", t);
         }

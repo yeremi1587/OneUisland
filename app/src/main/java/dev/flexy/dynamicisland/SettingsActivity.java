@@ -63,6 +63,11 @@ public final class SettingsActivity extends Activity {
             return;
         }
 
+        if (SCREEN_GAMES.equals(getIntent().getStringExtra(EXTRA_SCREEN))) {
+            buildGames(root);
+            return;
+        }
+
         TextView title = label("Dynamic Island", 30, text, true);
         title.setPadding(dp(8), dp(28), 0, dp(20));
         root.addView(title);
@@ -81,6 +86,16 @@ public final class SettingsActivity extends Activity {
         LinearLayout cards = group(root, "Cards");
         toggle(cards, "Frosted glass design", Settings.FROSTED_CARDS, Settings.DEF_FROSTED_CARDS);
         toggle(cards, "Recent Spotify playlists", Settings.SPOTIFY_RECENTS, Settings.DEF_SPOTIFY_RECENTS);
+
+        gap(root);
+        LinearLayout games = group(root, "Gaming");
+        toggle(games, "Chip temperature while gaming", Settings.GAME_TEMPERATURE, Settings.DEF_GAME_TEMPERATURE);
+        link(games, "Game apps", this::gamePackagesSummary, () ->
+                startActivity(new Intent(this, SettingsActivity.class).putExtra(EXTRA_SCREEN, SCREEN_GAMES)));
+        TextView gameNote = label("Needs \"Show in fullscreen\" for the island to appear over games. "
+                + "Temperature shows the battery reading and follows the thermal status color.", 12, secondary, false);
+        gameNote.setPadding(0, 0, 0, dp(8));
+        games.addView(gameNote);
 
         gap(root);
         LinearLayout alerts = group(root, "Alerts");
@@ -131,6 +146,7 @@ public final class SettingsActivity extends Activity {
 
     private static final String EXTRA_SCREEN = "screen";
     private static final String SCREEN_POSITION = "position";
+    private static final String SCREEN_GAMES = "games";
     private static final String[] POSITIONS = {"Center", "Left", "Front camera"};
 
     private interface Text {
@@ -169,6 +185,66 @@ public final class SettingsActivity extends Activity {
         row.setOnClickListener(x -> open.run());
         refreshers.add(() -> v.setText(value.get()));
         group.addView(row);
+    }
+
+    private String gamePackagesSummary() {
+        int n = gamePackages().length;
+        return n == 0 ? "None" : n + " app" + (n == 1 ? "" : "s");
+    }
+
+    private String[] gamePackages() {
+        String v = prefs.getString(Settings.GAME_PACKAGES, Settings.DEF_GAME_PACKAGES);
+        if (v == null || v.trim().isEmpty()) return new String[0];
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
+        for (String p : v.split("[,\n]")) {
+            p = p.trim();
+            if (!p.isEmpty()) out.add(p);
+        }
+        return out.toArray(new String[0]);
+    }
+
+    private void buildGames(LinearLayout root) {
+        TextView title = label("Game apps", 30, text, true);
+        title.setPadding(dp(8), dp(28), 0, dp(20));
+        root.addView(title);
+
+        final LinearLayout g = group(root, "Apps");
+        final android.widget.EditText box = new android.widget.EditText(this);
+        box.setGravity(Gravity.TOP);
+        box.setMinLines(4);
+        box.setTextColor(text);
+        box.setHintTextColor(secondary);
+        box.setHint(Settings.DEF_GAME_PACKAGES.replace(",", " · "));
+        box.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        StringBuilder joined = new StringBuilder();
+        for (String p : gamePackages()) {
+            if (joined.length() > 0) joined.append('\n');
+            joined.append(p);
+        }
+        box.setText(joined.toString());
+        g.addView(box);
+        TextView note = label("One package per line. Default: " + Settings.DEF_GAME_PACKAGES + ".", 12, secondary, false);
+        note.setPadding(0, dp(8), 0, 0);
+        g.addView(note);
+
+        Button apply = new Button(this);
+        apply.setText("Save");
+        apply.setAllCaps(false);
+        apply.setTextColor(0xFF0A84FF);
+        apply.setBackground(round(card, dp(22)));
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+        alp.topMargin = dp(16);
+        apply.setOnClickListener(v -> {
+            java.util.List<String> parsed = new ArrayList<>();
+            for (String p : box.getText().toString().split("[,\n]")) {
+                p = p.trim();
+                if (!p.isEmpty() && !parsed.contains(p)) parsed.add(p);
+            }
+            prefs.edit().putString(Settings.GAME_PACKAGES, parsed.isEmpty()
+                    ? "" : String.join(",", parsed)).apply();
+            finish();
+        });
+        root.addView(apply, alp);
     }
 
     private void buildPosition(LinearLayout root) {

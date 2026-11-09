@@ -49,6 +49,21 @@ final class IslandSettings {
         return values.getBoolean(Settings.EXPAND_LANDSCAPE, Settings.DEF_EXPAND_LANDSCAPE);
     }
 
+    static boolean gameTemperature() {
+        return values.getBoolean(Settings.GAME_TEMPERATURE, Settings.DEF_GAME_TEMPERATURE);
+    }
+
+    static java.util.Set<String> gamePackages() {
+        String v = values.getString(Settings.GAME_PACKAGES, Settings.DEF_GAME_PACKAGES);
+        java.util.Set<String> out = new java.util.HashSet<>();
+        if (v == null) return out;
+        for (String p : v.split(",")) {
+            p = p.trim();
+            if (!p.isEmpty()) out.add(p);
+        }
+        return out;
+    }
+
     static boolean alertBattery() {
         return values.getBoolean(Settings.ALERT_BATTERY, Settings.DEF_ALERT_BATTERY);
     }
