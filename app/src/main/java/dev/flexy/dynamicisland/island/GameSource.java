@@ -109,6 +109,9 @@ final class GameSource {
     /** Called on every controller refresh; appends the temperature pill when a game runs. */
     void feed(List<IslandItem> out) {
         refreshPackages();
+        XLog.i("game feed: enabled=" + enabled + " fg=" + oa.foregroundPackage()
+                + " packages=" + packages + " temp=" + IslandSettings.gameTemperature()
+                + " session=" + IslandSettings.gameSession());
         if (!enabled) return;
         schedule();
         String fg = oa.foregroundPackage();

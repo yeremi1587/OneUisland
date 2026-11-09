@@ -59,6 +59,7 @@ final class OaSource {
         } catch (Throwable t) {
             XLog.e("foreground fallback failed", t);
         }
+        XLog.i("foregroundPackage: OA unset, fallback null");
         return null;
     }
 
