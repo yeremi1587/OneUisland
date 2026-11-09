@@ -36,12 +36,12 @@ jobs:
           apk=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*-release*.apk' ! -name '*-unsigned.apk' -print -quit)
           test -n "$apk"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk"
-          cp "$apk" app/build/outputs/apk/release/OneUisland-1.4.7.apk
+          cp "$apk" app/build/outputs/apk/release/OneUisland-1.4.8.apk
 
       - name: Upload testing APK
         if: startsWith(github.ref, 'refs/heads/')
         uses: actions/upload-artifact@v4
         with:
-          name: OneUisland-1.4.7
-          path: app/build/outputs/apk/release/OneUisland-1.4.7.apk
+          name: OneUisland-1.4.8
+          path: app/build/outputs/apk/release/OneUisland-1.4.8.apk
 
