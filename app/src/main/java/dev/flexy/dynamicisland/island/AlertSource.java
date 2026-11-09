@@ -119,12 +119,6 @@ final class AlertSource {
         show(item, ms);
     }
 
-    /** Short alert bypassing the DND/keyguard gates, for events like the gaming session summary. */
-    void showShort(IslandItem item, long ms) {
-        show(item, ms);
-    }
-
-
     private boolean dndOn() {
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         int f = nm == null ? NotificationManager.INTERRUPTION_FILTER_ALL : nm.getCurrentInterruptionFilter();
