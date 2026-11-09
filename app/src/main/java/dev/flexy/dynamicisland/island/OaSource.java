@@ -41,25 +41,29 @@ final class OaSource {
     }
 
     String foregroundPackage() {
+        String pkg = foregroundPackageViaAm();
+        if (pkg != null && !pkg.isEmpty()) return pkg;
         Object cn = Refl.getStatic(helper, "baseActivityComponentName");
         if (cn instanceof ComponentName) {
-            String pkg = ((ComponentName) cn).getPackageName();
-            if (pkg != null && !pkg.isEmpty()) return pkg;
+            String base = ((ComponentName) cn).getPackageName();
+            if (base != null && !base.isEmpty()) return base;
         }
-        // Fallback: OA chip field is often unset for fullscreen games.
+        XLog.i("foregroundPackage: no foreground package detected");
+        return null;
+    }
+
+    private String foregroundPackageViaAm() {
         try {
             android.app.ActivityManager am = ctx.getSystemService(android.app.ActivityManager.class);
-            if (am != null) {
-                java.util.List<android.app.ActivityManager.RunningTaskInfo> tasks = am.getRunningTasks(1);
-                if (tasks != null && !tasks.isEmpty()) {
-                    ComponentName top = tasks.get(0).topActivity;
-                    if (top != null) return top.getPackageName();
-                }
+            if (am == null) return null;
+            java.util.List<android.app.ActivityManager.RunningTaskInfo> tasks = am.getRunningTasks(1);
+            if (tasks != null && !tasks.isEmpty()) {
+                ComponentName top = tasks.get(0).topActivity;
+                if (top != null) return top.getPackageName();
             }
         } catch (Throwable t) {
-            XLog.e("foreground fallback failed", t);
+            XLog.e("foreground getRunningTasks failed", t);
         }
-        XLog.i("foregroundPackage: OA unset, fallback null");
         return null;
     }
 
