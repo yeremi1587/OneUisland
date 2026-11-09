@@ -11,6 +11,8 @@ import android.os.PowerManager;
 import java.util.List;
 import java.util.Set;
 
+import dev.flexy.dynamicisland.xposed.XLog;
+
 /** Gaming island. Two optional settings, both off by default:
  *  - a compact temperature pill while a game from the configured list is in front;
  *  - a short session summary (duration, battery spent) after the game closes. */
